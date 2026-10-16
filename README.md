@@ -13,9 +13,10 @@ A zero-dependency, single-file UI experiment that turns a familiar productivity-
 - **Pressable 3D buttons** — ribbon tools physically depress with a thickness face on hover / click.
 - **Menu indicator** — a spring-animated, glowing underline that slides between menu items.
 - **Real-time studio** — every parameter (color, blur, thickness, glow, spacing, height, presets) is tweakable live from a glass control panel.
-- **Two builds, one idea**:
+- **Three scenes, one idea**:
   - `Fluent3D.html` — the full **studio**: reusable engine + real-time tuning panel.
   - `Fluent3DView.html` — the pure **viewer**: true 6-face 3D boards in perspective with drag-to-rotate + inertia.
+  - `Fluent3D_RAY.html` — the **ray-traced scene**: dark stage with a draggable **light sphere** that refracts through the glass in real time.
 
 ## 🖼 Preview
 
@@ -43,6 +44,7 @@ python3 -m http.server 8000
 
 - **`Fluent3D.html`** — open the tuning studio. Click section headers to expand/collapse; use the top-right panel to edit every property live.
 - **`Fluent3DView.html`** — open the 3D viewer. **Drag** to rotate the glass stack; it carries momentum with inertia.
+- **`Fluent3D_RAY.html`** — open the ray-traced scene. **Drag the glowing sphere** to move the light and watch it refract through the glass; drag empty space to orbit.
 
 ## 🧱 File Structure
 
@@ -50,6 +52,7 @@ python3 -m http.server 8000
 .
 ├── Fluent3D.html          # Studio — parameter tuning engine + glass control panel
 ├── Fluent3DView.html      # Viewer — true 3D perspective, drag-to-rotate
+├── Fluent3D_RAY.html      # Ray scene — draggable light sphere through glass
 ├── docs/images/           # Preview screenshots
 ├── LICENSE
 └── README.md
