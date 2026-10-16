@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ash Glass Panels · 3D Split</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  font-family: "Segoe UI Variable", "Segoe UI", -apple-system, sans-serif;
+  background: #e6e6ee;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ============================================================
+   场景 + 背景
+   ============================================================ */
+.scene {
+  position: fixed;
+  inset: 0;
+  perspective: 2200px;
+  perspective-origin: 50% 48%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  touch-action: none;
+  overflow: hidden;
+  background:
+    radial-gradient(60% 70% at 25% 30%, #ffffff 0%, #e8e8f0 40%, #d6d6e2 100%);
+}
+.scene.dragging { cursor: grabbing; }
+
+.scene::before {
+  content: '';
+  position: absolute;
+  inset: -30%;
+  background-image:
+    linear-gradient(rgba(150, 150, 175, 0.13) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(150, 150, 175, 0.13) 1px, transparent 1px);
+  background-size: 76px 76px;
+  pointer-events: none;
+  z-index: 0;
+}
+.scene::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(35% 45% at 78% 22%, rgba(255, 235, 210, 0.55), transparent 70%),
+    radial-gradient(40% 40% at 12% 82%, rgba(210, 220, 255, 0.5), transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ============================================================
+   舞台 + 旋转容器
+   ============================================================ */
+.stage {
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.35s cubic-bezier(0.22, 0.8, 0.3, 1);
+  z-index: 1;
+}
+.glass {
+  position: relative;
+  width: 0;
+  height: 0;
+  transform-style: preserve-3d;
+  transform: rotateX(14deg) rotateY(-30deg);
+  will-change: transform;
+}
+
+/* ============================================================
+   每块玻璃板（独立 3D 立方体）
+   ============================================================ */
+.board {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  transform-style: preserve-3d;
+}
+
+.face {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-style: preserve-3d;
+  backface-visibility: visible;
+}
+
+/* ---------- 正面 ---------- */
+.face-front {
+  background:
+    linear-gradient(155deg,
+      rgba(255, 255, 255, 0.42) 0%,
+      rgba(255, 255, 255, 0.20) 42%,
+      rgba(255, 255, 255, 0.30) 100%);
+  backdrop-filter: blur(10px) saturate(1.4);
+  -webkit-backdrop-filter: blur(10px) saturate(1.4);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 1),
+    inset 0 -1px 1px rgba(120, 120, 150, 0.3),
+    inset 1px 0 0 rgba(255, 255, 255, 0.75),
+    inset -1px 0 0 rgba(255, 255, 255, 0.75),
+    inset 0 0 60px rgba(255, 255, 255, 0.14);
+  overflow: hidden;
+}
+/* 玻璃表面光带 */
+.face-front::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(118deg,
+      rgba(255, 255, 255, 0.28) 0%,
+      transparent 24%,
+      transparent 72%,
+      rgba(255, 255, 255, 0.12) 100%),
+    radial-gradient(circle at 78% 12%, rgba(255, 255, 255, 0.22), transparent 32%);
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* ---------- 背面 ---------- */
+.face-back {
+  background:
+    linear-gradient(155deg,
+      rgba(255, 255, 255, 0.28) 0%,
+      rgba(255, 255, 255, 0.12) 55%,
+      rgba(255, 255, 255, 0.22) 100%);
+  backdrop-filter: blur(8px) saturate(1.2);
+  -webkit-backdrop-filter: blur(8px) saturate(1.2);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.8),
+    inset 0 -1px 1px rgba(120, 120, 150, 0.2);
+}
+
+/* ---------- 四个厚度侧面 ---------- */
+.face-top {
+  background:
+    linear-gradient(180deg,
+      rgba(255, 255, 255, 0.95) 0%,
+      rgba(255, 255, 255, 0.55) 40%,
+      rgba(220, 225, 245, 0.65) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 1),
+    inset 0 -1px 0 rgba(160, 165, 195, 0.5);
+}
+.face-bottom {
+  background:
+    linear-gradient(180deg,
+      rgba(180, 185, 210, 0.5) 0%,
+      rgba(210, 215, 235, 0.6) 60%,
+      rgba(230, 232, 245, 0.7) 100%);
+  border: 1px solid rgba(200, 205, 225, 0.6);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -1px 0 rgba(140, 145, 175, 0.5);
+}
+.face-left {
+  background:
+    linear-gradient(90deg,
+      rgba(255, 255, 255, 0.78) 0%,
+      rgba(240, 242, 255, 0.58) 50%,
+      rgba(215, 220, 245, 0.52) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    inset 0 -1px 0 rgba(160, 165, 195, 0.4);
+}
+.face-right {
+  background:
+    linear-gradient(90deg,
+      rgba(215, 220, 245, 0.52) 0%,
+      rgba(240, 242, 255, 0.58) 50%,
+      rgba(255, 255, 255, 0.78) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    inset 0 -1px 0 rgba(160, 165, 195, 0.4);
+}
+
+/* ============================================================
+   内容 —— 品牌条 / 菜单栏 / 功能区
+   ============================================================ */
+.strip {
+  height: 100%;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: #fff;
+  position: relative;
+  background: linear-gradient(180deg, #5a8edb 0%, #2b579a 100%);
+}
+.strip::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg,
+    rgba(255, 255, 255, 0.25) 0%,
+    rgba(255, 255, 255, 0) 55%,
+    rgba(0, 0, 0, 0.12) 100%);
+  pointer-events: none;
+}
+.dots {
+  display: grid;
+  grid-template-columns: repeat(3, 4px);
+  gap: 4px;
+  flex-shrink: 0;
+}
+.dots i {
+  width: 4px; height: 4px;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 50%;
+  box-shadow: 0 0 2px rgba(255, 255, 255, 0.6);
+}
+.brand-name {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+.tagline {
+  font-size: 13px;
+  font-weight: 500;
+  font-style: italic;
+  letter-spacing: 0.4px;
+  opacity: 0.92;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.menu-bar {
+  height: 100%;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #3a3a4a;
+  background: rgba(255, 255, 255, 0.62);
+}
+.menu-bar span {
+  position: relative;
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+.menu-bar span.active { color: #2b579a; font-weight: 700; }
+.menu-bar span.active::after {
+  content: '';
+  position: absolute;
+  left: -6px; right: -6px; bottom: 0;
+  height: 3px;
+  background: #2b579a;
+}
+
+.ribbon {
+  height: 100%;
+  padding: 12px 24px;
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.22);
+}
+.ribbon-group {
+  display: flex;
+  gap: 12px;
+  padding-right: 20px;
+  border-right: 1px solid rgba(180, 180, 200, 0.4);
+  height: 100%;
+  align-items: center;
+}
+.ribbon-group:last-child { border-right: none; }
+
+.tool {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 50px;
+  color: #4a4a5a;
+  font-size: 9px;
+  font-weight: 600;
+}
+.tool-ico {
+  width: 34px; height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 1),
+    0 1px 2px rgba(60, 60, 100, 0.1);
+  border-radius: 2px;
+}
+
+/* ============================================================
+   提示
+   ============================================================ */
+.hint {
+  position: fixed;
+  bottom: 26px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(70, 70, 100, 0.7);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  padding: 8px 18px;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  pointer-events: none;
+  z-index: 10;
+  animation: hintFade 2s ease 6s forwards;
+}
+@keyframes hintFade { to { opacity: 0; visibility: hidden; } }
+</style>
+</head>
+<body>
+
+<div class="scene" id="scene">
+  <div class="stage" id="stage">
+    <div class="glass" id="glass"></div>
+  </div>
+</div>
+
+<div class="hint">拖动旋转 · 三块玻璃拼接</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ============================================================
+     1. 构建三块独立玻璃板
+     ============================================================ */
+  const W = 720;              // 每块板的宽度
+  const D = 28;               // 每块板的厚度
+
+  // 三块板的高度 / 垂直中心偏移 / 内容
+  const BOARDS = [
+    {
+      h: 56,
+      y: -73,
+      content: `
+        <div class="strip">
+          <div class="dots"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="brand-name">Word</div>
+          <div class="tagline">Inspired new world</div>
+        </div>`
+    },
+    {
+      h: 44,
+      y: -18,
+      content: `
+        <div class="menu-bar">
+          <span>File</span>
+          <span class="active">Home</span>
+          <span>Insert</span>
+          <span>Design</span>
+          <span>Layout</span>
+          <span>References</span>
+          <span>Review</span>
+        </div>`
+    },
+    {
+      h: 92,
+      y: 55,
+      content: `
+        <div class="ribbon">
+          <div class="ribbon-group">
+            <div class="tool"><div class="tool-ico">📋</div><span>Paste</span></div>
+            <div class="tool"><div class="tool-ico">✂</div><span>Cut</span></div>
+            <div class="tool"><div class="tool-ico">📄</div><span>Copy</span></div>
+          </div>
+          <div class="ribbon-group">
+            <div class="tool"><div class="tool-ico"><b>B</b></div><span>Bold</span></div>
+            <div class="tool"><div class="tool-ico"><i>I</i></div><span>Italic</span></div>
+            <div class="tool"><div class="tool-ico"><u>U</u></div><span>Under</span></div>
+          </div>
+          <div class="ribbon-group">
+            <div class="tool"><div class="tool-ico">↩</div><span>Undo</span></div>
+            <div class="tool"><div class="tool-ico">↪</div><span>Redo</span></div>
+          </div>
+        </div>`
+    }
+  ];
+
+  /**
+   * 构建一块独立的 3D 玻璃板（6 个真实几何面）
+   */
+  function buildBoard(w, h, d, yOffset, contentHTML) {
+    const board = document.createElement('div');
+    board.className = 'board';
+    board.style.transform = `translateY(${yOffset}px)`;
+
+    // 通用：创建一个居中定位的面
+    function makeFace(cls, fw, fh, extraStyle, transform) {
+      const el = document.createElement('div');
+      el.className = 'face ' + cls;
+      el.style.width  = fw + 'px';
+      el.style.height = fh + 'px';
+      el.style.margin = `${-fh / 2}px 0 0 ${-fw / 2}px`;
+      el.style.transform = transform;
+      if (extraStyle) el.setAttribute('style', el.getAttribute('style') + ';' + extraStyle);
+      return el;
+    }
+
+    // 正面（有内容）
+    const front = makeFace('face-front', w, h, null, `translateZ(${d / 2}px)`);
+    front.innerHTML = contentHTML;
+
+    // 背面（纯玻璃）
+    const back = makeFace('face-back', w, h, null, `translateZ(${-d / 2}px) rotateY(180deg)`);
+
+    // 顶面（厚度侧面：宽 W × 深 D）
+    const top = makeFace('face-top', w, d, null, `rotateX(90deg) translateZ(${h / 2}px)`);
+
+    // 底面
+    const bottom = makeFace('face-bottom', w, d, null, `rotateX(-90deg) translateZ(${h / 2}px)`);
+
+    // 左面（厚度侧面：深 D × 高 H）
+    const left = makeFace('face-left', d, h, null, `rotateY(-90deg) translateZ(${w / 2}px)`);
+
+    // 右面
+    const right = makeFace('face-right', d, h, null, `rotateY(90deg) translateZ(${w / 2}px)`);
+
+    board.appendChild(front);
+    board.appendChild(back);
+    board.appendChild(top);
+    board.appendChild(bottom);
+    board.appendChild(left);
+    board.appendChild(right);
+    return board;
+  }
+
+  /* 生成三块板并插入 */
+  const glass = document.getElementById('glass');
+  BOARDS.forEach(cfg => {
+    glass.appendChild(buildBoard(W, cfg.h, D, cfg.y, cfg.content));
+  });
+
+  /* ============================================================
+     2. 拖拽旋转 + 惯性
+     ============================================================ */
+  const scene = document.getElementById('scene');
+  const stage = document.getElementById('stage');
+
+  let rotX = 14;
+  let rotY = -30;
+  let velX = 0;
+  let velY = 0;
+
+  let dragging = false;
+  let lastX = 0, lastY = 0;
+  let lastMoveTime = 0;
+  let rafId = null;
+  let lastFrameTime = 0;
+
+  const SENS = 0.42;
+  const FRICTION = 0.94;
+  const MIN_VEL = 0.04;
+  const LIMIT_X = 82;
+
+  function render() {
+    glass.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`;
+  }
+  const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+
+  function onDown(e) {
+    dragging = true;
+    scene.classList.add('dragging');
+    const p = e.touches ? e.touches[0] : e;
+    lastX = p.clientX;
+    lastY = p.clientY;
+    lastMoveTime = performance.now();
+    velX = velY = 0;
+    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+    e.preventDefault();
+  }
+
+  function onMove(e) {
+    if (!dragging) return;
+    const p = e.touches ? e.touches[0] : e;
+    const now = performance.now();
+    const dx = p.clientX - lastX;
+    const dy = p.clientY - lastY;
+    const dt = Math.max(now - lastMoveTime, 1);
+
+    lastX = p.clientX;
+    lastY = p.clientY;
+    lastMoveTime = now;
+
+    rotY += dx * SENS;
+    rotX = clamp(rotX + dy * SENS, -LIMIT_X, LIMIT_X);
+
+    velY = (dx * SENS) / dt * 16.67;
+    velX = (dy * SENS) / dt * 16.67;
+
+    render();
+    e.preventDefault();
+  }
+
+  function onUp() {
+    if (!dragging) return;
+    dragging = false;
+    scene.classList.remove('dragging');
+    velX = clamp(velX, -14, 14);
+    velY = clamp(velY, -14, 14);
+    lastFrameTime = performance.now();
+    rafId = requestAnimationFrame(inertia);
+  }
+
+  function inertia(now) {
+    const dt = Math.min((now - lastFrameTime) / 16.67, 3);
+    lastFrameTime = now;
+    velX *= Math.pow(FRICTION, dt);
+    velY *= Math.pow(FRICTION, dt);
+    rotX = clamp(rotX + velX * dt, -LIMIT_X, LIMIT_X);
+    rotY += velY * dt;
+    render();
+    if (Math.abs(velX) > MIN_VEL || Math.abs(velY) > MIN_VEL) {
+      rafId = requestAnimationFrame(inertia);
+    } else {
+      rafId = null;
+    }
+  }
+
+  scene.addEventListener('mousedown', onDown);
+  window.addEventListener('mousemove', onMove);
+  window.addEventListener('mouseup', onUp);
+  scene.addEventListener('touchstart', onDown, { passive: false });
+  window.addEventListener('touchmove', onMove, { passive: false });
+  window.addEventListener('touchend', onUp);
+  window.addEventListener('touchcancel', onUp);
+
+  /* ============================================================
+     3. 响应式缩放
+     ============================================================ */
+  function fitToViewport() {
+    const minSide = Math.min(window.innerWidth, window.innerHeight);
+    const s = Math.min(1, minSide / 900);
+    stage.style.transform = `scale(${s})`;
+  }
+  window.addEventListener('resize', fitToViewport);
+  fitToViewport();
+
+  render();
+
+})();
+</script>
+</body>
+</html>
